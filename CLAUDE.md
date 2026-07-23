@@ -1,10 +1,26 @@
-# Claude Code Project Instructions
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Objective
 
 Build Visual App Builder as a separate Frappe app installed inside an existing ERPNext/SMS site.
 
 The product should allow authorised non-developers to visually define record-based and workflow-based applications. The first applications are QA Lifecycle Manager, Document Control Manager and Learning Material Vetting Manager.
+
+## What exists today
+
+This repository is a starter and handover pack, not yet an installable Frappe app. The only executable code is:
+
+- `scripts/check_repository.py` — validates required files exist and validates every JSON definition in `examples/` (required top-level keys, `schema_version` "0.1", unique stable IDs, workflow transitions referencing known states). This is the single source of validation logic; `tests/test_definitions.py` imports and reuses it.
+- `examples/*.json` — one application definition per demonstration app, conforming to `schemas/application-definition.schema.json` and `docs/DEFINITION_MODEL.md`.
+- `prototype/visual_app_builder_prototype.html` — standalone visual reference only; do not extend it.
+
+`frappe_app/` and `frontend/` are placeholders. The real Frappe app gets generated later with `bench new-app` in a target bench (see Implementation order).
+
+## Definition model in brief
+
+Each application is one versioned JSON document with top-level sections: `application`, `pages`, `data_model`, `workflow`, `automations`, `permissions`, `translations`, `notifications`, `tests`. IDs (pages, entities, states, transitions, automations, notifications, tests) are stable and unique across the document. Lifecycle: Draft → Technical Review → UAT → Approved → Published → Archived; published versions are immutable, changes create a new version. Full details in `docs/DEFINITION_MODEL.md`.
 
 ## Read first
 
@@ -74,6 +90,14 @@ Before committing documentation or definition changes:
 python3 scripts/check_repository.py
 python3 -m unittest discover -s tests -v
 ```
+
+Run a single test:
+
+```bash
+python3 -m unittest tests.test_definitions.DefinitionTests.test_all_example_definitions_are_valid -v
+```
+
+No external packages are required; everything runs on the Python 3 standard library. If you change the definition format, update `scripts/check_repository.py`, `schemas/application-definition.schema.json`, `docs/DEFINITION_MODEL.md` and all three `examples/*.json` together — the checks fail otherwise.
 
 Once the real Frappe app exists, add the bench test commands for that environment to this file.
 
