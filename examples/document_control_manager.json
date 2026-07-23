@@ -1,0 +1,203 @@
+{
+  "schema_version": "0.1",
+  "application": {
+    "code": "document_control_manager",
+    "title": "Document Control Manager",
+    "description": "Control document drafting, review, approval, issue, acknowledgement and obsolescence.",
+    "status": "draft",
+    "version": "0.1.0"
+  },
+  "pages": [
+    {
+      "id": "dashboard",
+      "title": "Dashboard",
+      "type": "dashboard",
+      "components": [
+        {
+          "id": "status_summary",
+          "type": "metric_group"
+        }
+      ]
+    },
+    {
+      "id": "records",
+      "title": "Records",
+      "type": "list",
+      "components": [
+        {
+          "id": "record_list",
+          "type": "record_list"
+        }
+      ]
+    },
+    {
+      "id": "record_detail",
+      "title": "Record Detail",
+      "type": "form",
+      "components": [
+        {
+          "id": "record_form",
+          "type": "record_form"
+        },
+        {
+          "id": "workflow_history",
+          "type": "workflow_history"
+        }
+      ]
+    }
+  ],
+  "data_model": {
+    "entities": [
+      {
+        "id": "controlled_document",
+        "doctype": "Controlled Document",
+        "mode": "new",
+        "fields": [
+          "document_code",
+          "title",
+          "owner",
+          "version",
+          "effective_date",
+          "status"
+        ]
+      },
+      {
+        "id": "document_version",
+        "doctype": "Document Version",
+        "mode": "new",
+        "fields": [
+          "document",
+          "version",
+          "file",
+          "change_summary",
+          "approved_by"
+        ]
+      }
+    ],
+    "relationships": []
+  },
+  "workflow": {
+    "states": [
+      {
+        "id": "draft",
+        "label": "Draft"
+      },
+      {
+        "id": "department_review",
+        "label": "Department Review"
+      },
+      {
+        "id": "qa_review",
+        "label": "QA Review"
+      },
+      {
+        "id": "approval",
+        "label": "Approval"
+      },
+      {
+        "id": "issued",
+        "label": "Issued"
+      },
+      {
+        "id": "obsolete",
+        "label": "Obsolete"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "submit_department",
+        "from": "draft",
+        "to": "department_review",
+        "action": "Submit for Department Review",
+        "role": "Document Owner"
+      },
+      {
+        "id": "submit_qa",
+        "from": "department_review",
+        "to": "qa_review",
+        "action": "Submit for QA Review",
+        "role": "Department Reviewer"
+      },
+      {
+        "id": "submit_approval",
+        "from": "qa_review",
+        "to": "approval",
+        "action": "Submit for Approval",
+        "role": "QA Reviewer"
+      },
+      {
+        "id": "issue_document",
+        "from": "approval",
+        "to": "issued",
+        "action": "Issue Document",
+        "role": "Approver"
+      },
+      {
+        "id": "obsolete_document",
+        "from": "issued",
+        "to": "obsolete",
+        "action": "Mark Obsolete",
+        "role": "Document Controller"
+      }
+    ]
+  },
+  "automations": [],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "entity": "controlled_document",
+      "read": true,
+      "write": true,
+      "create": true,
+      "submit": true
+    },
+    {
+      "role": "App User",
+      "entity": "controlled_document",
+      "read": true,
+      "write": true,
+      "create": true,
+      "submit": false
+    }
+  ],
+  "translations": {
+    "app.title": {
+      "en": "Document Control Manager",
+      "zh-CN": "Document Control Manager"
+    },
+    "common.save": {
+      "en": "Save",
+      "zh-CN": "Save"
+    },
+    "common.submit": {
+      "en": "Submit",
+      "zh-CN": "Submit"
+    }
+  },
+  "notifications": [
+    {
+      "id": "document_review_request",
+      "channel": "email",
+      "subject": "Document review required: {{ title }}",
+      "body": "Please review the controlled document and record your decision."
+    },
+    {
+      "id": "document_issued",
+      "channel": "email",
+      "subject": "Controlled document issued: {{ title }}",
+      "body": "A new controlled version has been issued and may require acknowledgement."
+    }
+  ],
+  "tests": [
+    {
+      "id": "doc_version_lock",
+      "title": "Issued version is immutable",
+      "expected": "An issued version cannot be edited."
+    },
+    {
+      "id": "doc_acknowledgement",
+      "title": "Acknowledgement is recorded",
+      "expected": "Required recipients can acknowledge the issued version."
+    }
+  ]
+}

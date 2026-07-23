@@ -1,0 +1,242 @@
+{
+  "schema_version": "0.1",
+  "application": {
+    "code": "qa_lifecycle_manager",
+    "title": "QA Lifecycle Manager",
+    "description": "Plan, perform, correct, test, approve and close QA reviews.",
+    "status": "draft",
+    "version": "0.1.0"
+  },
+  "pages": [
+    {
+      "id": "dashboard",
+      "title": "Dashboard",
+      "type": "dashboard",
+      "components": [
+        {
+          "id": "status_summary",
+          "type": "metric_group"
+        }
+      ]
+    },
+    {
+      "id": "records",
+      "title": "Records",
+      "type": "list",
+      "components": [
+        {
+          "id": "record_list",
+          "type": "record_list"
+        }
+      ]
+    },
+    {
+      "id": "record_detail",
+      "title": "Record Detail",
+      "type": "form",
+      "components": [
+        {
+          "id": "record_form",
+          "type": "record_form"
+        },
+        {
+          "id": "workflow_history",
+          "type": "workflow_history"
+        }
+      ]
+    }
+  ],
+  "data_model": {
+    "entities": [
+      {
+        "id": "qa_review",
+        "doctype": "QA Review",
+        "mode": "new",
+        "fields": [
+          "title",
+          "scope",
+          "owner",
+          "reviewer",
+          "due_date",
+          "status"
+        ]
+      },
+      {
+        "id": "quality_action",
+        "doctype": "Quality Action",
+        "mode": "existing",
+        "fields": [
+          "name",
+          "status",
+          "assigned_to",
+          "completion_date"
+        ]
+      },
+      {
+        "id": "uat_run",
+        "doctype": "UAT Run",
+        "mode": "new",
+        "fields": [
+          "application",
+          "version",
+          "tester",
+          "result",
+          "sign_off"
+        ]
+      }
+    ],
+    "relationships": []
+  },
+  "workflow": {
+    "states": [
+      {
+        "id": "planned",
+        "label": "Planned"
+      },
+      {
+        "id": "assigned",
+        "label": "Assigned"
+      },
+      {
+        "id": "in_review",
+        "label": "In Review"
+      },
+      {
+        "id": "action_required",
+        "label": "Corrective Action Required"
+      },
+      {
+        "id": "uat",
+        "label": "UAT"
+      },
+      {
+        "id": "qa_approval",
+        "label": "QA Approval"
+      },
+      {
+        "id": "closed",
+        "label": "Closed"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "assign_review",
+        "from": "planned",
+        "to": "assigned",
+        "action": "Assign Review",
+        "role": "QA Manager"
+      },
+      {
+        "id": "start_review",
+        "from": "assigned",
+        "to": "in_review",
+        "action": "Start Review",
+        "role": "Reviewer"
+      },
+      {
+        "id": "request_action",
+        "from": "in_review",
+        "to": "action_required",
+        "action": "Request Corrective Action",
+        "role": "Reviewer"
+      },
+      {
+        "id": "send_to_uat",
+        "from": "action_required",
+        "to": "uat",
+        "action": "Send to UAT",
+        "role": "QA Manager"
+      },
+      {
+        "id": "request_approval",
+        "from": "uat",
+        "to": "qa_approval",
+        "action": "Request QA Approval",
+        "role": "Process Owner"
+      },
+      {
+        "id": "close_review",
+        "from": "qa_approval",
+        "to": "closed",
+        "action": "Close Review",
+        "role": "QA Approver"
+      }
+    ]
+  },
+  "automations": [],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "entity": "qa_review",
+      "read": true,
+      "write": true,
+      "create": true,
+      "submit": true
+    },
+    {
+      "role": "App User",
+      "entity": "qa_review",
+      "read": true,
+      "write": true,
+      "create": true,
+      "submit": false
+    }
+  ],
+  "translations": {
+    "app.title": {
+      "en": "QA Lifecycle Manager",
+      "zh-CN": "QA Lifecycle Manager"
+    },
+    "common.save": {
+      "en": "Save",
+      "zh-CN": "Save"
+    },
+    "common.submit": {
+      "en": "Submit",
+      "zh-CN": "Submit"
+    }
+  },
+  "notifications": [
+    {
+      "id": "review_assignment",
+      "channel": "email",
+      "subject": "QA review assigned: {{ title }}",
+      "body": "You have been assigned to complete the QA review by {{ due_date }}."
+    },
+    {
+      "id": "action_required_email",
+      "channel": "email",
+      "subject": "Corrective action required: {{ title }}",
+      "body": "Please complete the assigned corrective action and attach evidence."
+    },
+    {
+      "id": "uat_invitation",
+      "channel": "email",
+      "subject": "UAT invitation: {{ title }}",
+      "body": "Please complete the assigned UAT test cases and record the result."
+    },
+    {
+      "id": "closure_notice",
+      "channel": "email",
+      "subject": "QA review closed: {{ title }}",
+      "body": "The review has been independently verified and closed."
+    }
+  ],
+  "tests": [
+    {
+      "id": "qa_permission",
+      "title": "Department access is restricted",
+      "expected": "Unauthorised users cannot view restricted review records."
+    },
+    {
+      "id": "qa_finding",
+      "title": "Failed checklist item creates finding",
+      "expected": "A failed item creates or links a finding and corrective action."
+    },
+    {
+      "id": "qa_closure",
+      "title": "Closure requires verification",
+      "expected": "Closure is blocked until UAT and independent verification pass."
+    }
+  ]
+}

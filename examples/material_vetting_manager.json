@@ -1,0 +1,209 @@
+{
+  "schema_version": "0.1",
+  "application": {
+    "code": "material_vetting_manager",
+    "title": "Learning Material Vetting Manager",
+    "description": "Submit, vet, correct, approve and release learning materials.",
+    "status": "draft",
+    "version": "0.1.0"
+  },
+  "pages": [
+    {
+      "id": "dashboard",
+      "title": "Dashboard",
+      "type": "dashboard",
+      "components": [
+        {
+          "id": "status_summary",
+          "type": "metric_group"
+        }
+      ]
+    },
+    {
+      "id": "records",
+      "title": "Records",
+      "type": "list",
+      "components": [
+        {
+          "id": "record_list",
+          "type": "record_list"
+        }
+      ]
+    },
+    {
+      "id": "record_detail",
+      "title": "Record Detail",
+      "type": "form",
+      "components": [
+        {
+          "id": "record_form",
+          "type": "record_form"
+        },
+        {
+          "id": "workflow_history",
+          "type": "workflow_history"
+        }
+      ]
+    }
+  ],
+  "data_model": {
+    "entities": [
+      {
+        "id": "material_submission",
+        "doctype": "Material Submission",
+        "mode": "new",
+        "fields": [
+          "course",
+          "module",
+          "title",
+          "submitted_by",
+          "file",
+          "status"
+        ]
+      },
+      {
+        "id": "vetting_review",
+        "doctype": "Vetting Review",
+        "mode": "new",
+        "fields": [
+          "submission",
+          "reviewer",
+          "score",
+          "decision",
+          "comments"
+        ]
+      }
+    ],
+    "relationships": []
+  },
+  "workflow": {
+    "states": [
+      {
+        "id": "submitted",
+        "label": "Submitted"
+      },
+      {
+        "id": "completeness_check",
+        "label": "Completeness Check"
+      },
+      {
+        "id": "academic_vetting",
+        "label": "Academic Vetting"
+      },
+      {
+        "id": "correction_required",
+        "label": "Correction Required"
+      },
+      {
+        "id": "approval",
+        "label": "Approval"
+      },
+      {
+        "id": "released",
+        "label": "Released"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "check_completeness",
+        "from": "submitted",
+        "to": "completeness_check",
+        "action": "Check Completeness",
+        "role": "Academic Administrator"
+      },
+      {
+        "id": "start_vetting",
+        "from": "completeness_check",
+        "to": "academic_vetting",
+        "action": "Start Academic Vetting",
+        "role": "Academic Reviewer"
+      },
+      {
+        "id": "request_correction",
+        "from": "academic_vetting",
+        "to": "correction_required",
+        "action": "Request Correction",
+        "role": "Academic Reviewer"
+      },
+      {
+        "id": "submit_approval",
+        "from": "academic_vetting",
+        "to": "approval",
+        "action": "Submit for Approval",
+        "role": "Academic Reviewer"
+      },
+      {
+        "id": "release_material",
+        "from": "approval",
+        "to": "released",
+        "action": "Release Material",
+        "role": "Academic Approver"
+      }
+    ]
+  },
+  "automations": [],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "entity": "material_submission",
+      "read": true,
+      "write": true,
+      "create": true,
+      "submit": true
+    },
+    {
+      "role": "App User",
+      "entity": "material_submission",
+      "read": true,
+      "write": true,
+      "create": true,
+      "submit": false
+    }
+  ],
+  "translations": {
+    "app.title": {
+      "en": "Learning Material Vetting Manager",
+      "zh-CN": "Learning Material Vetting Manager"
+    },
+    "common.save": {
+      "en": "Save",
+      "zh-CN": "Save"
+    },
+    "common.submit": {
+      "en": "Submit",
+      "zh-CN": "Submit"
+    }
+  },
+  "notifications": [
+    {
+      "id": "vetting_assignment",
+      "channel": "email",
+      "subject": "Material vetting assigned: {{ title }}",
+      "body": "Please review the submitted material against the approved checklist."
+    },
+    {
+      "id": "correction_request",
+      "channel": "email",
+      "subject": "Material correction required: {{ title }}",
+      "body": "Please address all mandatory corrections and resubmit the material."
+    },
+    {
+      "id": "material_released",
+      "channel": "email",
+      "subject": "Learning material approved and released: {{ title }}",
+      "body": "The approved material is ready for controlled use."
+    }
+  ],
+  "tests": [
+    {
+      "id": "material_required_file",
+      "title": "Submission requires a file",
+      "expected": "The record cannot proceed without a material file."
+    },
+    {
+      "id": "material_correction",
+      "title": "Mandatory corrections block approval",
+      "expected": "Approval is blocked while mandatory corrections remain open."
+    }
+  ]
+}
