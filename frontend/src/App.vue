@@ -8,6 +8,7 @@ import DataModelEditor from './components/DataModelEditor.vue'
 import PageCanvas from './components/PageCanvas.vue'
 import WorkflowEditor from './components/WorkflowEditor.vue'
 import AutomationEditor from './components/AutomationEditor.vue'
+import MetaEditor from './components/MetaEditor.vue'
 
 // Editors are registered here; each later step adds one. Keeping them in a
 // single list keeps App.vue a thin shell around the shared store.
@@ -16,6 +17,7 @@ const tabs = [
   { id: 'pages', label: 'Pages', comp: PageCanvas },
   { id: 'workflow', label: 'Workflow', comp: WorkflowEditor },
   { id: 'automations', label: 'Automations', comp: AutomationEditor },
+  { id: 'meta', label: 'Permissions & Meta', comp: MetaEditor },
   { id: 'issues', label: 'Issues', comp: IssuePanel },
   { id: 'json', label: 'Definition JSON', comp: JsonView },
 ]
