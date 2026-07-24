@@ -108,7 +108,16 @@ export async function runAutomations(ctx, event) {
     }
     if (!pass) continue
     log.push(`automation "${auto.id}" fired (${auto.trigger.type})`)
-    for (const action of auto.actions || []) await runAction(ctx, action, event, log)
+    for (const action of auto.actions || []) {
+      // Contain per-action failures (e.g. a typo'd entity id in a param): log
+      // and continue, so one bad action can't abort the run uncaught with
+      // earlier actions already committed.
+      try {
+        await runAction(ctx, action, event, log)
+      } catch (e) {
+        log.push(`error in action "${action.type}": ${e.message}`)
+      }
+    }
   }
   return log
 }

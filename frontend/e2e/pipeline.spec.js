@@ -42,6 +42,21 @@ test('publishing again creates a new version; both are selectable in Runtime', a
   await expect(versions.locator('option')).toHaveCount(3) // "active" + v1 + v2
 })
 
+test('a Runtime tab already open sees a Studio publish from another tab (storage sync)', async ({ page, context }) => {
+  // open Runtime FIRST, keep it open
+  await page.goto('/runtime.html')
+  await expect(page.getByTestId('pick-definition')).toBeVisible()
+  // publish a new app from a second tab (same context = shared localStorage)
+  const studio = await context.newPage()
+  await studio.goto('/index.html')
+  await studio.getByTestId('load-example').click()
+  await studio.getByTestId('app-code').fill('cross_tab_app')
+  await studio.getByTestId('publish').click()
+  await expect(studio.getByTestId('publish-msg')).toContainText('cross_tab_app v1')
+  // the ALREADY-OPEN Runtime tab must now list it, without a reload
+  await expect(page.getByTestId('pick-definition')).toContainText('cross_tab_app')
+})
+
 test('publish is blocked when the definition has registry violations', async ({ page }) => {
   await page.goto('/index.html')
   await page.getByTestId('load-example').click()

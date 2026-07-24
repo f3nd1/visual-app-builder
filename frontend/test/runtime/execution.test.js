@@ -38,6 +38,16 @@ describe('workflow transition execution', () => {
     const rec = await ctx.adapter.createRecord('qa_review', { title: 'T', status: 'planned' })
     await expect(executeTransition(ctx, 'qa_review', rec.name, t(ctx.def, 'assign_review'))).rejects.toThrow(/requires role/)
   })
+
+  it('executeTransition rejects a user with the transition role but no write permission', async () => {
+    // role gate passes (QA Manager) but no permission row grants QA Manager write
+    const ctx = ctxFor('qa_manager')
+    ctx.user = { name: 'role_only', roles: ['QA Manager'] } // not App User, not System Manager
+    const rec = await ctx.adapter.createRecord('qa_review', { title: 'T', status: 'planned' })
+    await expect(executeTransition(ctx, 'qa_review', rec.name, t(ctx.def, 'assign_review'))).rejects.toThrow(/write permission/)
+    // and the record must NOT have moved
+    expect((await ctx.adapter.getRecord('qa_review', rec.name)).status).toBe('planned')
+  })
 })
 
 describe('automation execution', () => {
@@ -74,6 +84,24 @@ describe('automation execution', () => {
     }]
     const log = await runAutomations(ctx, { type: 'field_changed', entityId: 'qa_review', record: rec, changedField: 'status' })
     expect(log.some((l) => /fired/.test(l))).toBe(false)
+  })
+
+  it('a throwing action is contained: logged as an error, later actions still run', async () => {
+    const ctx = ctxFor('Administrator')
+    const rec = await ctx.adapter.createRecord('qa_review', { title: 'T', status: 'planned' })
+    ctx.def.automations = [{
+      id: 'bad_then_good',
+      trigger: { type: 'record_created' },
+      conditions: [],
+      actions: [
+        { type: 'create_record', entity: 'no_such_entity' }, // throws in the adapter
+        { type: 'send_email', notification: 'still_runs' },
+      ],
+    }]
+    // must not reject the whole run
+    const log = await runAutomations(ctx, { type: 'record_created', entityId: 'qa_review', record: rec })
+    expect(log.some((l) => /error/i.test(l) && /no_such_entity|unknown entity/.test(l))).toBe(true)
+    expect(log.some((l) => /still_runs/.test(l))).toBe(true)
   })
 
   it('email/notification actions only log (no real send)', async () => {

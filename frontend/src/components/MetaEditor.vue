@@ -61,7 +61,7 @@ const entities = () => store.def.data_model.entities
         <thead><tr><th>Key</th><th v-for="l in LANGS" :key="l">{{ l }}</th><th></th></tr></thead>
         <tbody>
           <tr v-for="(val, key) in def().translations" :key="key">
-            <td><input :value="key" @change="renameTranslationKey(def(), key, $event.target.value)" /></td>
+            <td><input :value="key" @change="renameTranslationKey(def(), key, $event.target.value) || ($event.target.value = key)" /></td>
             <td v-for="l in LANGS" :key="l"><input v-model="def().translations[key][l]" /></td>
             <td><button class="chip-x" @click="removeTranslationKey(def(), key)">×</button></td>
           </tr>

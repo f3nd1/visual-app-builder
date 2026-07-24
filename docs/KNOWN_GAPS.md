@@ -39,9 +39,10 @@ drop-in swap, not a rewrite.
 | 9 | Time-based automation triggers (`due_date_reached`, `scheduled_daily`) via Frappe scheduler | inert in `engine/automation.js` | RUNTIME_ADAPTERS.md §3 |
 | 10 | Action semantics: `request_approval`, `create_quality_action`, `block_submission` | logged stubs | RUNTIME_ADAPTERS.md §3 |
 | 11 | `checklist_complete` condition against real checklist data | assumed true | RUNTIME_ADAPTERS.md §3 |
-| 12 | Server-side definition validation hook (port `check_repository.py` + registry check into a Frappe `validate`) | client-side `validate.js` + `registryIssues` | keep the JS as the shared source of truth |
+| 12 | Server-side definition validation hook (port `check_repository.py` + registry check into a Frappe `validate`) | client-side `validate.js` + `registryIssues` | keep the JS as the shared source of truth. NOTE: `check_repository.py` is a strict SUBSET of the ajv validation (stdlib-only — no JSON-schema check, so it accepts e.g. transitions missing `action`/`role` that ajv rejects); the server hook must run the FULL schema, not just port the python checks |
 | 13 | AI-assisted definition drafting | never built | out of scope every session so far; propose-only, never auto-publish/execute (D-004) |
 | 14 | Studio + Runtime delivered as Frappe Desk pages / bundled into the app | standalone Vite bundles | two separate bundles today (index.html, runtime.html) |
+| 15 | Install-day mapping of `quality_action` | `MockDataAdapter` fabricates rows for it like any entity | the QA example marks it `mode: "existing"` deliberately — it references UCC's REAL Quality Action DocType. The install step must map it in the Approved DocType Registry, never create a colliding new DocType |
 
 ## Invariant every future session must preserve
 

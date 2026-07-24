@@ -38,6 +38,21 @@ test('open a record from the list, then move it through a workflow transition', 
   await expect(page.getByTestId('wfh-state')).not.toHaveText(stateBefore)
 })
 
+test('malformed definition upload is rejected, app keeps running', async ({ page }) => {
+  let dialogMsg = ''
+  page.on('dialog', (d) => { dialogMsg = d.message(); d.accept() })
+  await page.getByTestId('load-export-input').setInputFiles({
+    name: 'broken.json',
+    mimeType: 'application/json',
+    // page with no components array -> would crash openRecord un-gated
+    buffer: Buffer.from(JSON.stringify({ application: { code: 'x' }, pages: [{ id: 'p', title: 'P', type: 'form' }], data_model: { entities: [] } })),
+  })
+  await expect.poll(() => dialogMsg).toContain('Rejected definition')
+  // the previously-loaded published app still works
+  await page.getByTestId('page-tab-records').click()
+  await expect(page.locator('[data-testid^="row-"]').first()).toBeVisible()
+})
+
 test('creating a record fires a record_created automation (logged)', async ({ page }) => {
   // upload a small definition that has an automation, via the harness loader
   const def = {

@@ -71,12 +71,35 @@ function pickApp(code) {
 function pickVersion(v) {
   versionSel.value = v ? Number(v) : null
 }
+// Minimal structural gate for the dev-only override path. Published versions
+// are fully validated at publish time; this upload is the one entry point that
+// bypasses that, and renderers assume schema shape (e.g. page.components is an
+// array). ponytail: structural check only, not ajv — full schema validation in
+// the Runtime bundle would cost ~40kB gzip for a dev-only loader.
+function sanityCheck(def) {
+  if (!def || typeof def !== 'object') return 'not an object'
+  if (!def.application?.code) return 'missing application.code'
+  if (!Array.isArray(def.pages)) return 'pages must be an array'
+  for (const p of def.pages) {
+    if (!Array.isArray(p.components)) return `page "${p?.id}" has no components array`
+  }
+  if (!Array.isArray(def.data_model?.entities)) return 'data_model.entities must be an array'
+  return null
+}
+
 function loadExport(ev) {
   const file = ev.target.files?.[0]
   if (!file) return
   const reader = new FileReader()
   reader.onload = () => {
-    try { override.value = JSON.parse(reader.result) } catch (e) { alert('Not valid JSON: ' + e.message) }
+    try {
+      const parsed = JSON.parse(reader.result)
+      const problem = sanityCheck(parsed)
+      if (problem) { alert('Rejected definition: ' + problem); return }
+      override.value = parsed
+    } catch (e) {
+      alert('Not valid JSON: ' + e.message)
+    }
   }
   reader.readAsText(file)
   ev.target.value = ''

@@ -24,6 +24,12 @@ export async function executeTransition(ctx, entityId, recordName, transition) {
   const record = await ctx.adapter.getRecord(entityId, recordName)
   const check = canTransition(ctx.def, ctx.user, transition, record)
   if (!check.ok) throw new Error(check.reason)
+  // Role gate alone is not enough: a transition writes the record, so the user
+  // must also hold write permission on the entity (the renderers only gate UI;
+  // this is the choke point every transition routes through).
+  if (!(await ctx.can(entityId, 'write'))) {
+    throw new Error(`no write permission on "${entityId}"`)
+  }
   const updated = await ctx.adapter.updateRecord(entityId, recordName, { status: transition.to })
   return {
     record: updated,

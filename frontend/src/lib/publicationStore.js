@@ -35,6 +35,20 @@ export class MockPublicationStore {
     this.state = reactive({ apps: this.persist ? load() : {} })
     if (this.persist) {
       watch(() => this.state.apps, (v) => save(v), { deep: true })
+      // Studio and Runtime are separate bundles sharing this store through
+      // localStorage; without this, a tab open during a publish in another tab
+      // reads stale state forever. The 'storage' event fires only in OTHER
+      // tabs, so re-reading here cannot loop with the watch above.
+      // ponytail: whole-state replace, last-writer-wins on concurrent edits —
+      // fine for a mock; the real backend (DocType) replaces this store.
+      if (typeof window !== 'undefined') {
+        window.addEventListener('storage', (e) => {
+          if (e.key !== KEY) return
+          const fresh = load()
+          for (const k of Object.keys(this.state.apps)) if (!(k in fresh)) delete this.state.apps[k]
+          Object.assign(this.state.apps, fresh)
+        })
+      }
     }
   }
 
