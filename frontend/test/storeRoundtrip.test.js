@@ -4,6 +4,25 @@ import { validateDefinition } from '../src/lib/validate.js'
 import { addComponent, addPage } from '../src/lib/pageMutations.js'
 import { addState, addTransition } from '../src/lib/workflowMutations.js'
 import qa from '../../examples/qa_lifecycle_manager.json'
+import dcm from '../../examples/document_control_manager.json'
+import mvm from '../../examples/material_vetting_manager.json'
+
+// The Studio must generalise beyond QA: loading and re-exporting any of the
+// three demo definitions must lose nothing and stay valid. This is the
+// in-scope reuse signal (the runtime reuse proof needs the Runtime bundle,
+// which is out of scope this session).
+describe('Studio round-trips all three demo definitions unchanged', () => {
+  it.each([
+    ['qa_lifecycle_manager', qa],
+    ['document_control_manager', dcm],
+    ['material_vetting_manager', mvm],
+  ])('%s: load -> export is byte-identical and valid', (_name, def) => {
+    store.load(structuredClone(def))
+    const parsed = JSON.parse(store.export())
+    expect(validateDefinition(parsed)).toEqual([])
+    expect(parsed).toEqual(def)
+  })
+})
 
 // Mirrors step 5's acceptance scenario: load the QA example into the Studio
 // store, make edits, export, and confirm the exported JSON still validates and
