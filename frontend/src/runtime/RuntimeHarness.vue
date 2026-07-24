@@ -64,7 +64,13 @@ const page = computed(() => pages.value[pageIdx.value] || null)
 const refreshKey = ref(0)
 const autoLog = ref([])
 
-function openRecord(name) { recordName.value = name }
+// Opening a record from a list jumps to the first page that has a form, so the
+// list -> detail flow works even though list and form live on separate pages.
+function openRecord(name) {
+  recordName.value = name
+  const detailIdx = pages.value.findIndex((p) => p.components.some((c) => c.type === 'record_form'))
+  if (detailIdx >= 0) pageIdx.value = detailIdx
+}
 function selectPage(i) { pageIdx.value = i; recordName.value = null }
 
 async function onSaved({ entityId, record }) {
@@ -98,7 +104,7 @@ async function onChanged(event) {
       </select>
       <label class="filebtn">
         <button type="button" onclick="this.nextElementSibling.click()">Load export…</button>
-        <input type="file" accept="application/json" style="display:none" @change="loadExport" />
+        <input type="file" accept="application/json" style="display:none" data-testid="load-export-input" @change="loadExport" />
       </label>
     </header>
 
