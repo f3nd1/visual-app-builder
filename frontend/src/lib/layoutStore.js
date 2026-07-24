@@ -70,6 +70,3 @@ export function ensurePositions(def, canvas, ids, seedFn) {
   })
   return map
 }
-
-// Test/introspection helper.
-export const _state = state

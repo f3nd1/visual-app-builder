@@ -70,7 +70,7 @@ function itemsFor(comp) {
   return [
     { label: 'Edit', shortcut: '↵', action: () => (selectedId.value = comp.id) },
     { label: 'Duplicate', shortcut: '⌘D', action: () => (selectedId.value = duplicateComponent(store.def, page.value, comp.id)) },
-    { label: 'Bind data', action: () => { selectedId.value = comp.id; focusBind.value = true } },
+    { label: 'Bind data', action: () => { selectedId.value = comp.id } },
     { label: 'Add visibility condition', action: () => { comp.visible_if = comp.visible_if || ''; selectedId.value = comp.id } },
     { label: 'Move up', action: () => moveComponent(page.value, comp.id, -1) },
     { label: 'Move down', action: () => moveComponent(page.value, comp.id, +1) },
@@ -81,7 +81,6 @@ function openMenu(ev, comp) {
   selectedId.value = comp.id
   menu.value = { open: true, x: ev.clientX, y: ev.clientY, items: itemsFor(comp) }
 }
-const focusBind = ref(false)
 
 // --- keyboard accelerators ---
 function onKey(e) {
@@ -217,7 +216,7 @@ function summary(c) {
           <label>{{ p.label }}</label>
           <input v-if="p.kind === 'text'" v-model="selected[p.key]" />
           <input v-else-if="p.kind === 'bool'" type="checkbox" v-model="selected[p.key]" />
-          <select v-else-if="p.kind === 'entity'" v-model="selected[p.key]" :autofocus="focusBind">
+          <select v-else-if="p.kind === 'entity'" v-model="selected[p.key]">
             <option :value="undefined">—</option>
             <option v-for="e in entities" :key="e.id" :value="e.id">{{ e.id }}</option>
           </select>

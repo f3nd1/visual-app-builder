@@ -33,5 +33,3 @@ export const ACTIONS = {
   create_quality_action: { label: 'Create Quality Action', params: [] },
   block_submission: { label: 'Block submission with message', params: [{ key: 'message', label: 'Validation message' }] },
 }
-
-export const catalogueLabel = (map, type) => map[type]?.label || type

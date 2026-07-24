@@ -44,5 +44,3 @@ export function addAction(auto, type = 'send_email') {
 export function removeAction(auto, i) {
   auto.actions.splice(i, 1)
 }
-
-export { seed }

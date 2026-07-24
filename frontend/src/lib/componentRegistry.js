@@ -110,9 +110,5 @@ export function paletteByCategory() {
   return groups
 }
 
-export const FIELD_TYPES = Object.keys(COMPONENT_TYPES).filter(
-  (t) => COMPONENT_TYPES[t].category === 'Fields',
-)
-
 // The type a dragged data-model field becomes by default.
 export const DEFAULT_FIELD_COMPONENT = 'text_field'

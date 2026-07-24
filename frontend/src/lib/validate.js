@@ -11,11 +11,9 @@
 // round-trips through the repo's own validator unchanged.
 
 import Ajv2020 from 'ajv/dist/2020.js'
-import addFormats from 'ajv-formats'
 import schema from '../../../schemas/application-definition.schema.json'
 
 const ajv = new Ajv2020({ allErrors: true, strict: false })
-addFormats(ajv)
 const validateSchema = ajv.compile(schema)
 
 // Mirrors check_repository.py: these sections share one id namespace.
