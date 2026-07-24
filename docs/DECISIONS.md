@@ -18,6 +18,8 @@ Designers use approved fields, components, relationships, conditions and actions
 
 ## D-005: Phased frontend
 
+> **Superseded by D-010** on the framework choice. The phasing below still holds (definition model and shared runtime come first); the "React and TypeScript" lean does not — the Studio is built in Vue 3. See D-010 for why. Original text kept for history.
+
 The standalone HTML prototype remains the visual reference. The production visual editor may later use React and TypeScript, but Phase 1 prioritises the definition model and shared runtime.
 
 ## D-006: Separate environments
