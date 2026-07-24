@@ -3,12 +3,14 @@
 // framework-free so they can be unit-tested in Node.
 
 import { uniqueId } from './ids.js'
+import { checkedSectionIds } from './defIds.js'
 
 const idsOf = (arr) => (arr || []).map((x) => x.id)
 
 // --- Data model: entities ---
 export function addEntity(def, doctype = 'New DocType') {
-  const id = uniqueId(doctype, idsOf(def.data_model.entities))
+  // entities share the checked-section id namespace
+  const id = uniqueId(doctype, checkedSectionIds(def))
   def.data_model.entities.push({ id, doctype, mode: 'new', fields: [] })
   return id
 }

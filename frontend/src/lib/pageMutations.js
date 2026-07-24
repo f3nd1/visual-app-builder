@@ -3,6 +3,7 @@
 // check_repository.py requires but keeps ids genuinely stable references.
 
 import { uniqueId } from './ids.js'
+import { checkedSectionIds } from './defIds.js'
 import { COMPONENT_TYPES, DEFAULT_FIELD_COMPONENT } from './componentRegistry.js'
 
 export function allComponentIds(def) {
@@ -14,7 +15,7 @@ export function allComponentIds(def) {
 const PAGE_TYPES = ['list', 'form', 'dashboard', 'workspace']
 
 export function addPage(def, title = 'New Page', type = 'form') {
-  const id = uniqueId(title, (def.pages || []).map((p) => p.id))
+  const id = uniqueId(title, checkedSectionIds(def))
   def.pages.push({ id, title, type, components: [] })
   return id
 }
