@@ -57,6 +57,30 @@ test('a Runtime tab already open sees a Studio publish from another tab (storage
   await expect(page.getByTestId('pick-definition')).toContainText('cross_tab_app')
 })
 
+test('importing a real Frappe DocType export reseeds the registry live', async ({ page }) => {
+  await page.goto('/index.html')
+  await page.getByTestId('load-example').click()
+  await page.getByTestId('tab-data_model').click()
+  // clean against the demo-derived seed
+  await expect(page.getByTestId('registry-warning')).not.toBeVisible()
+  // import a registry approving ONLY QA Review (with fewer fields)
+  page.on('dialog', (d) => d.accept())
+  await page.getByTestId('import-registry-input').setInputFiles({
+    name: 'ucc_export.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({
+      doctype: 'DocType',
+      name: 'QA Review',
+      fields: [{ fieldname: 'title', fieldtype: 'Data' }, { fieldname: 'status', fieldtype: 'Select' }],
+    })),
+  })
+  // the same definition now shows violations (Quality Action, UAT Run, extra fields)
+  await expect(page.getByTestId('registry-warning')).toBeVisible()
+  // and publish is blocked against the new whitelist
+  await page.getByTestId('publish').click()
+  await expect(page.getByTestId('publish-msg')).toContainText('Cannot publish')
+})
+
 test('publish is blocked when the definition has registry violations', async ({ page }) => {
   await page.goto('/index.html')
   await page.getByTestId('load-example').click()

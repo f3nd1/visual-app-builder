@@ -7,6 +7,7 @@
 // throws + a Mock implementation), so a future FrappeApprovedRegistry that
 // reads the real "Approved DocType Registry" DocType is a drop-in replacement.
 
+import { reactive } from 'vue'
 import qa from '../../../examples/qa_lifecycle_manager.json'
 import dcm from '../../../examples/document_control_manager.json'
 import mvm from '../../../examples/material_vetting_manager.json'
@@ -36,7 +37,16 @@ export class ApprovedRegistry {
 export class MockApprovedRegistry extends ApprovedRegistry {
   constructor(seed = DEFAULT_APPROVED) {
     super()
-    this.map = new Map(seed.map((d) => [d.doctype, d.fields]))
+    // reactive Map: Studio computeds (approved lists, violation warnings)
+    // re-evaluate automatically when the registry is reseeded.
+    this.map = reactive(new Map(seed.map((d) => [d.doctype, d.fields])))
+  }
+  // Replace the whole whitelist (e.g. after importing a real UCC field list).
+  // ponytail: in-memory only — a reseed lasts the session; persist to
+  // localStorage only if designers actually need it to survive reloads.
+  reseed(seed) {
+    this.map.clear()
+    for (const d of seed) this.map.set(d.doctype, d.fields)
   }
   listDocTypes() {
     return [...this.map.keys()]
@@ -69,6 +79,36 @@ export function registryIssues(def, registry) {
     }
   }
   return issues
+}
+
+// Convert a real Frappe DocType export into registry seed format, so the mock
+// registry can be reseeded with UCC's actual field list the moment someone
+// provides an export — no bench required. Accepts the shapes Frappe actually
+// produces: a single DocType doc, an array of them, or the {docs:[...]}
+// wrapper from export_doc/data import.
+const LAYOUT_FIELDTYPES = new Set([
+  'Section Break', 'Column Break', 'Tab Break', 'HTML', 'Button', 'Fold', 'Heading',
+])
+
+export function seedFromFrappeExport(exported) {
+  let docs = exported
+  if (docs && !Array.isArray(docs) && Array.isArray(docs.docs)) docs = docs.docs
+  if (!Array.isArray(docs)) docs = [docs]
+
+  const seed = []
+  for (const doc of docs) {
+    if (!doc || doc.doctype !== 'DocType' || !doc.name) continue
+    const fields = (doc.fields || [])
+      .filter((f) => f.fieldname && !LAYOUT_FIELDTYPES.has(f.fieldtype))
+      .map((f) => f.fieldname)
+    // 'name' is always readable in Frappe but never listed as a docfield
+    if (!fields.includes('name')) fields.unshift('name')
+    seed.push({ doctype: doc.name, fields })
+  }
+  if (seed.length === 0) {
+    throw new Error('no DocType documents found in this export (expected doctype: "DocType" entries)')
+  }
+  return seed
 }
 
 // A shared default instance for the Studio.

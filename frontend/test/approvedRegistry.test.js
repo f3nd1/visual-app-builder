@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   MockApprovedRegistry, ApprovedRegistry, deriveSeed, registryIssues, DEFAULT_APPROVED,
+  seedFromFrappeExport,
 } from '../src/lib/approvedRegistry.js'
 import qa from '../../examples/qa_lifecycle_manager.json'
 import dcm from '../../examples/document_control_manager.json'
@@ -61,5 +62,47 @@ describe('interface shape is drop-in replaceable', () => {
       { data_model: { entities: [{ doctype: 'D', fields: ['b'] }] } },
     ])
     expect(seed).toEqual([{ doctype: 'D', fields: ['a', 'b'] }])
+  })
+})
+
+describe('seedFromFrappeExport converts real Frappe DocType exports', () => {
+  const qaReviewExport = {
+    doctype: 'DocType',
+    name: 'QA Review',
+    fields: [
+      { fieldname: 'title', fieldtype: 'Data' },
+      { fieldname: 'sb1', fieldtype: 'Section Break' }, // layout — excluded
+      { fieldname: 'status', fieldtype: 'Select' },
+      { fieldname: 'cb1', fieldtype: 'Column Break' }, // layout — excluded
+      { fieldname: 'checklist', fieldtype: 'Table' }, // child table — a real field
+    ],
+  }
+
+  it('single doc: keeps data fields, drops layout fields, adds name', () => {
+    expect(seedFromFrappeExport(qaReviewExport)).toEqual([
+      { doctype: 'QA Review', fields: ['name', 'title', 'status', 'checklist'] },
+    ])
+  })
+
+  it('accepts the {docs:[...]} wrapper and plain arrays; skips non-DocType docs', () => {
+    const wrapped = { docs: [qaReviewExport, { doctype: 'Workflow', name: 'ignored' }] }
+    expect(seedFromFrappeExport(wrapped)).toHaveLength(1)
+    expect(seedFromFrappeExport([qaReviewExport])).toHaveLength(1)
+  })
+
+  it('throws when the file contains no DocType documents', () => {
+    expect(() => seedFromFrappeExport({ docs: [{ doctype: 'Workflow', name: 'x' }] })).toThrow(/no DocType/)
+    expect(() => seedFromFrappeExport({})).toThrow(/no DocType/)
+  })
+
+  it('reseed swaps the whitelist: previously-approved DocTypes become violations', () => {
+    const reg = new MockApprovedRegistry()
+    expect(registryIssues(qa, reg)).toEqual([]) // seeded from examples
+    reg.reseed(seedFromFrappeExport(qaReviewExport)) // now ONLY QA Review approved
+    const issues = registryIssues(qa, reg)
+    expect(issues.some((i) => i.kind === 'doctype' && i.doctype === 'Quality Action')).toBe(true)
+    expect(issues.some((i) => i.kind === 'doctype' && i.doctype === 'UAT Run')).toBe(true)
+    // and QA Review's example fields not in the export are field violations now
+    expect(issues.some((i) => i.kind === 'field' && i.doctype === 'QA Review' && i.field === 'scope')).toBe(true)
   })
 })

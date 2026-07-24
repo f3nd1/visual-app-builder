@@ -2,13 +2,33 @@
 import { computed } from 'vue'
 import { store } from '../store.js'
 import { addEntity, removeEntity, addRelationship, removeRelationship } from '../lib/mutations.js'
-import { approvedRegistry as registry, registryIssues } from '../lib/approvedRegistry.js'
+import { approvedRegistry as registry, registryIssues, seedFromFrappeExport } from '../lib/approvedRegistry.js'
 
 const dm = () => store.def.data_model
 const REL_TYPES = ['link', 'child_table', 'dynamic_link', 'reference']
 
-const approvedDocTypes = registry.listDocTypes()
+// computed (not a snapshot): re-lists when the registry is reseeded via import
+const approvedDocTypes = computed(() => registry.listDocTypes())
 const issues = computed(() => registryIssues(store.def, registry))
+
+// Import a real Frappe DocType export and reseed the whitelist from it —
+// the path for swapping the demo-derived seed for UCC's actual field list.
+function importRegistry(ev) {
+  const file = ev.target.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    try {
+      const seed = seedFromFrappeExport(JSON.parse(reader.result))
+      registry.reseed(seed)
+      alert(`Registry reseeded: ${seed.length} approved DocType(s).`)
+    } catch (e) {
+      alert('Registry import failed: ' + e.message)
+    }
+  }
+  reader.readAsText(file)
+  ev.target.value = ''
+}
 
 function removeField(entity, i) {
   entity.fields.splice(i, 1)
@@ -42,6 +62,10 @@ function newRelationship() {
       <div class="section-head">
         <h3>Approved DocTypes</h3>
         <button @click="addEntity(store.def)">+ DocType</button>
+        <label class="filebtn">
+          <button type="button" onclick="this.nextElementSibling.click()" title="Reseed the whitelist from a real Frappe DocType export JSON">Import registry…</button>
+          <input type="file" accept="application/json" style="display: none" data-testid="import-registry-input" @change="importRegistry" />
+        </label>
       </div>
       <datalist id="approved-doctypes">
         <option v-for="dt in approvedDocTypes" :key="dt" :value="dt" />
