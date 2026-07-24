@@ -9,10 +9,12 @@ import PageCanvas from './components/PageCanvas.vue'
 import WorkflowEditor from './components/WorkflowEditor.vue'
 import AutomationEditor from './components/AutomationEditor.vue'
 import MetaEditor from './components/MetaEditor.vue'
+import ApplicationEditor from './components/ApplicationEditor.vue'
 
 // Editors are registered here; each later step adds one. Keeping them in a
 // single list keeps App.vue a thin shell around the shared store.
 const tabs = [
+  { id: 'application', label: 'Application', comp: ApplicationEditor },
   { id: 'data_model', label: 'Data Model', comp: DataModelEditor },
   { id: 'pages', label: 'Pages', comp: PageCanvas },
   { id: 'workflow', label: 'Workflow', comp: WorkflowEditor },
@@ -21,7 +23,7 @@ const tabs = [
   { id: 'issues', label: 'Issues', comp: IssuePanel },
   { id: 'json', label: 'Definition JSON', comp: JsonView },
 ]
-const active = ref('pages')
+const active = ref('application')
 const activeComp = computed(() => tabs.find((t) => t.id === active.value)?.comp)
 
 function loadExample() {
@@ -63,7 +65,9 @@ function exportDef() {
       <button type="button" onclick="this.nextElementSibling.click()">Load file…</button>
       <input type="file" accept="application/json" style="display: none" @change="loadFile" />
     </label>
-    <button class="primary" @click="exportDef">Export</button>
+    <button class="primary" @click="exportDef" :title="issues.length ? 'Exports, but the definition still has validation issues' : 'Export a schema-valid definition'">
+      Save / Export
+    </button>
     <span class="spacer"></span>
     <span
       class="issue-chip"
