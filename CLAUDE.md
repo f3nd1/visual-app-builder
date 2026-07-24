@@ -10,13 +10,14 @@ The product should allow authorised non-developers to visually define record-bas
 
 ## What exists today
 
-This repository is a starter and handover pack, not yet an installable Frappe app. The only executable code is:
+Two working parts, plus the definition contract that binds them:
 
-- `scripts/check_repository.py` — validates required files exist and validates every JSON definition in `examples/` (required top-level keys, `schema_version` "0.1", unique stable IDs, workflow transitions referencing known states). This is the single source of validation logic; `tests/test_definitions.py` imports and reuses it.
-- `examples/*.json` — one application definition per demonstration app, conforming to `schemas/application-definition.schema.json` and `docs/DEFINITION_MODEL.md`.
-- `prototype/visual_app_builder_prototype.html` — standalone visual reference only; do not extend it.
+- **`frontend/`** — a complete, tested Vue 3 + Vite app: the **Studio** (design-time builder, `src/`) and the **Runtime** (staff-facing renderer, `src/runtime/`), two separate bundles. The whole designer→user pipeline works in-browser against mocks. No backend. See "Frontend architecture" below.
+- **`scripts/check_repository.py`** — validates required files exist and validates every `examples/*.json` (required top-level keys, `schema_version` "0.1", unique stable IDs across sections, workflow transitions referencing known states). Single source of the Python validation logic; `tests/test_definitions.py` imports it. Note it is a **subset** of the frontend's ajv schema check — it does not run JSON Schema.
+- **`examples/*.json`** — one definition per demo app, conforming to `schemas/application-definition.schema.json` and `docs/DEFINITION_MODEL.md`. These also **seed** the Studio's mock Approved DocType Registry and the Runtime's synthetic data.
+- **`prototype/visual_app_builder_prototype.html`** — standalone visual reference only; superseded by the real Studio (D-009). Do not extend it.
 
-`frappe_app/` and `frontend/` are placeholders. The real Frappe app gets generated later with `bench new-app` in a target bench (see Implementation order).
+**Everything backend is deferred** (needs a Frappe bench / Docker, unavailable here) and tracked in `docs/KNOWN_GAPS.md`. `frappe_app/` is still a placeholder for the eventual `bench new-app`.
 
 ## Definition model in brief
 
@@ -27,11 +28,24 @@ Each application is one versioned JSON document with top-level sections: `applic
 Before changing code, read:
 
 1. `README.md`
-2. `CURRENT_STATUS.md`
-3. `docs/DECISIONS.md`
-4. `docs/ARCHITECTURE.md`
-5. `docs/MVP_SCOPE.md`
-6. the relevant file under `requirements/`
+2. `docs/DECISIONS.md` (D-001..D-010 — the binding decisions)
+3. `docs/ARCHITECTURE.md`
+4. `docs/MVP_SCOPE.md`
+5. `docs/KNOWN_GAPS.md` — the single current list of what is mock vs. deferred, and what each mock's real replacement is
+6. `docs/RUNTIME_ADAPTERS.md` — method-level spec for the real Frappe adapters
+7. the relevant file under `requirements/`
+
+## Frontend architecture (the part with code)
+
+The Studio and Runtime never share component code — they share the **definition**. Read these together to get the big picture:
+
+- **Schema-lock** is the core invariant. `src/store.js`'s state *is* the definition document in exact `schemas/application-definition.schema.json` shape — no internal model, no mapping layer. Load = `JSON.parse`, export = `JSON.stringify`. Every edit is continuously validated (`src/lib/validate.js`: ajv against the real schema file + a JS port of check_repository.py's cross-section/transition rules). `npm run roundtrip` proves a Studio export passes the real `check_repository.py` byte-identical. **Never change `definition_json`'s shape** without updating schema + validator + `docs/DEFINITION_MODEL.md` + all three examples together.
+- **Adapter pattern** isolates every backend-dependent behavior behind a base interface + `Mock*` implementation, so the real Frappe version is a drop-in: `DataAdapter`/`MockDataAdapter`, `PermissionAdapter`/`MockPermissionAdapter` (`src/runtime/adapters/`), `ApprovedRegistry`/`MockApprovedRegistry` (`src/lib/approvedRegistry.js`), and `MockPublicationStore` (`src/lib/publicationStore.js`). The Runtime engines (`src/runtime/engine/`) only ever call these interfaces.
+- **The pipeline**: Studio *Publish* (gated on schema validity + registry cleanliness) → `MockPublicationStore` (versioned, checksummed, immutable, localStorage) → Runtime reads the published version. Studio (`index.html`) and Runtime (`runtime.html`) are separate bundles sharing that store via localStorage on the same origin.
+- **Data-driven registries**: component types live in `src/lib/componentRegistry.js` (type → props schema → renderer ref), automation catalogue in `src/lib/automationCatalogue.js`. Add a type = a registry entry, not a core change.
+- **Studio-only state stays out of the definition**: node canvas positions (`src/lib/layoutStore.js`) — the schema forbids extra keys on states, so layout is persisted separately.
+
+Gotcha caught before: never `structuredClone` a Vue `reactive()` object (throws in-browser, not in Node tests) — definition data is JSON, so JSON-clone it.
 
 ## Non-negotiable architecture
 
@@ -84,33 +98,30 @@ Do not add unrestricted SQL, arbitrary Python execution, a generic join builder 
 
 ## Verification commands
 
-Before committing documentation or definition changes:
+Repo root (Python, stdlib only — no packages needed):
 
 ```bash
 python3 scripts/check_repository.py
 python3 -m unittest discover -s tests -v
+python3 -m unittest tests.test_definitions.DefinitionTests.test_all_example_definitions_are_valid -v   # single test
 ```
 
-Run a single test:
+Frontend (run inside `frontend/`, after `npm install`):
 
 ```bash
-python3 -m unittest tests.test_definitions.DefinitionTests.test_all_example_definitions_are_valid -v
+npm test            # Vitest unit suite
+npm run test:runtime  # runtime subset only
+npx vitest run test/publicationStore.test.js   # single test file
+npm run test:e2e    # Playwright (Studio + Runtime), uses pre-installed Chromium
+npm run roundtrip   # exports a Studio definition, validates it with the real check_repository.py
+npm run build       # builds BOTH bundles (index.html Studio + runtime.html Runtime)
+npm run dev         # dev server; Studio at /, Runtime harness at /runtime.html
 ```
 
-No external packages are required; everything runs on the Python 3 standard library. If you change the definition format, update `scripts/check_repository.py`, `schemas/application-definition.schema.json`, `docs/DEFINITION_MODEL.md` and all three `examples/*.json` together — the checks fail otherwise.
+The full green bar across all of the above (plus byte-identical round-trip) is the definition-of-done every session has held to. If you change the definition format, update `scripts/check_repository.py`, `schemas/application-definition.schema.json`, `src/lib/validate.js`'s parity checks, `docs/DEFINITION_MODEL.md` and all three `examples/*.json` together — the checks fail otherwise.
 
-Once the real Frappe app exists, add the bench test commands for that environment to this file.
+Playwright note: this environment ships Chromium at `/opt/pw-browsers`; `playwright.config.js` pins `executablePath` — do not run `playwright install`.
 
-## First requested deliverable
+## Where to continue
 
-Produce a technical plan for Phase 1 and implement only the minimum skeleton needed to:
-
-1. save a QA Lifecycle Manager definition;
-2. load it through a shared runtime;
-3. render one list page and one record page;
-4. enforce user permissions;
-5. move a record through a small workflow;
-6. record a UAT result;
-7. publish an immutable version.
-
-Do not start by rebuilding the complete visual prototype in React.
+The Phase 1 frontend skeleton (design → publish → render list/record → enforce permissions → move through workflow → record UAT → publish immutable version) is **done, in mock**. The next work is the real Frappe backend — see `docs/KNOWN_GAPS.md` for the ranked list and each mock's drop-in replacement. That work needs a bench (Docker/OrbStack) and starts with the Implementation order above.
