@@ -8,6 +8,7 @@ import {
   addAutomation, removeAutomation, setPartType,
   addCondition, removeCondition, addAction, removeAction,
 } from '../lib/automationMutations.js'
+import ParamInput from './ParamInput.vue'
 
 const autos = () => store.def.automations
 const paramsFor = (map, type) => map[type]?.params || []
@@ -38,7 +39,7 @@ const paramsFor = (map, type) => map[type]?.params || []
         </select>
         <template v-for="p in paramsFor(TRIGGERS, a.trigger.type)" :key="p.key">
           <label>{{ p.label }}</label>
-          <input v-model="a.trigger[p.key]" />
+          <ParamInput :part="a.trigger" :param="p" />
         </template>
       </div>
 
@@ -51,7 +52,7 @@ const paramsFor = (map, type) => map[type]?.params || []
             <option v-for="(cd, k) in CONDITIONS" :key="k" :value="k">{{ cd.label }}</option>
           </select>
           <template v-for="p in paramsFor(CONDITIONS, c.type)" :key="p.key">
-            <input v-model="c[p.key]" :placeholder="p.label" />
+            <ParamInput :part="c" :param="p" />
           </template>
           <button class="chip-x" @click="removeCondition(a, i)" title="Remove">×</button>
         </div>
@@ -65,7 +66,7 @@ const paramsFor = (map, type) => map[type]?.params || []
             <option v-for="(ad, k) in ACTIONS" :key="k" :value="k">{{ ad.label }}</option>
           </select>
           <template v-for="p in paramsFor(ACTIONS, ac.type)" :key="p.key">
-            <input v-model="ac[p.key]" :placeholder="p.label" />
+            <ParamInput :part="ac" :param="p" />
           </template>
           <button class="chip-x" @click="removeAction(a, i)" title="Remove" :disabled="a.actions.length === 1">×</button>
         </div>

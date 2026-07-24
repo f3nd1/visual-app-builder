@@ -7,5 +7,7 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   server: { fs: { allow: ['..'] } },
-  test: { environment: 'node' },
+  // Vitest owns test/ (unit); Playwright owns e2e/ (.spec.js). Scope vitest so
+  // it does not try to run the Playwright specs (its default glob matches .spec.js too).
+  test: { environment: 'node', include: ['test/**/*.test.js'] },
 })
