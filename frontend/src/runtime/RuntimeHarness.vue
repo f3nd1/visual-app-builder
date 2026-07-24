@@ -4,8 +4,10 @@
 // workflow/automation execution (step 4) are added in later steps.
 import { ref, computed, watch } from 'vue'
 import { MockDataAdapter } from './adapters/MockDataAdapter.js'
+import { MockPermissionAdapter } from './adapters/MockPermissionAdapter.js'
 import { createRuntimeContext } from './context.js'
 import { SYNTHETIC_NOTICE } from './fixtures/synthetic.js'
+import { MOCK_USERS } from './fixtures/users.js'
 import RuntimePage from './components/RuntimePage.vue'
 import qa from '../../../examples/qa_lifecycle_manager.json'
 import dcm from '../../../examples/document_control_manager.json'
@@ -22,14 +24,21 @@ const adapter = ref(null)
 const ctx = ref(null)
 const pageIdx = ref(0)
 const recordName = ref(null)
+const userName = ref(MOCK_USERS[0].name) // default: Administrator (System Manager)
+
+const currentUser = computed(() => MOCK_USERS.find((u) => u.name === userName.value) || null)
 
 function rebuild() {
-  adapter.value = new MockDataAdapter(def.value)
-  ctx.value = createRuntimeContext(def.value, { adapter: adapter.value, user: null })
+  const perms = new MockPermissionAdapter(def.value)
+  adapter.value = new MockDataAdapter(def.value, { permissionAdapter: perms })
+  ctx.value = createRuntimeContext(def.value, { adapter: adapter.value, user: currentUser.value })
   pageIdx.value = 0
   recordName.value = null
 }
 watch(def, rebuild, { immediate: true })
+// Switching role does not rebuild data (keeps edits); it just re-points the
+// context user, and every renderer re-reads permissions because it watches ctx.user.
+watch(currentUser, (u) => { if (ctx.value) ctx.value.user = u })
 
 function pickExample(code) {
   def.value = structuredClone(EXAMPLES[code])
@@ -61,6 +70,12 @@ function selectPage(i) { pageIdx.value = i; recordName.value = null }
       <label>Definition</label>
       <select :value="def.application.code" @change="pickExample($event.target.value)" data-testid="pick-definition">
         <option v-for="(_d, code) in EXAMPLES" :key="code" :value="code">{{ code }}</option>
+      </select>
+      <label>Role</label>
+      <select v-model="userName" data-testid="pick-user">
+        <option v-for="u in MOCK_USERS" :key="u.name" :value="u.name">
+          {{ u.name }} [{{ u.roles.join(', ') || 'no roles' }}]
+        </option>
       </select>
       <label class="filebtn">
         <button type="button" onclick="this.nextElementSibling.click()">Load export…</button>
