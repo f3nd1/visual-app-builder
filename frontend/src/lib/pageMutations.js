@@ -6,6 +6,11 @@ import { uniqueId } from './ids.js'
 import { checkedSectionIds } from './defIds.js'
 import { COMPONENT_TYPES, DEFAULT_FIELD_COMPONENT } from './componentRegistry.js'
 
+// Everything in a definition is JSON by construction, so a JSON clone is both
+// sufficient and safe on Vue reactive proxies (structuredClone can choke on a
+// proxy in the browser, which unit tests using plain objects never surface).
+const clone = (x) => JSON.parse(JSON.stringify(x))
+
 export function allComponentIds(def) {
   const ids = []
   for (const p of def.pages || []) for (const c of p.components || []) ids.push(c.id)
@@ -30,7 +35,7 @@ export function makeComponent(def, type, overrides = {}) {
   if (!reg) throw new Error(`unknown component type: ${type}`)
   const stem = overrides.field || reg.label || type
   const id = uniqueId(stem, allComponentIds(def))
-  return { id, type, ...structuredClone(reg.defaults || {}), ...overrides }
+  return { id, type, ...clone(reg.defaults || {}), ...overrides }
 }
 
 // Insert at `index` (default: end) so a live drop placeholder can position it.
@@ -59,7 +64,7 @@ export function duplicateComponent(def, page, id) {
   const i = page.components.findIndex((c) => c.id === id)
   if (i < 0) return null
   const src = page.components[i]
-  const copy = structuredClone(src)
+  const copy = clone(src)
   copy.id = uniqueId(src.id, allComponentIds(def))
   page.components.splice(i + 1, 0, copy)
   return copy.id

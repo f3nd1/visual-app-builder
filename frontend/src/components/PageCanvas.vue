@@ -120,6 +120,7 @@ function summary(c) {
           draggable="true"
           @dragstart="dragPalette($event, it.type)"
           :title="it.type"
+          :data-testid="`pal-${it.type}`"
         >
           <span class="ic">{{ it.icon }}</span>{{ it.label }}
         </div>
@@ -137,6 +138,7 @@ function summary(c) {
             draggable="true"
             @dragstart="dragField($event, e.id, f)"
             title="Drag onto the canvas to create a bound field"
+            :data-testid="`field-${e.id}-${f}`"
           >
             <span class="ic">·</span>{{ f }}
           </div>
@@ -172,6 +174,7 @@ function summary(c) {
       <div
         v-if="page"
         class="canvas"
+        data-testid="page-canvas"
         @dragover="onCanvasDragOver"
         @dragleave="onCanvasLeave"
         @drop="onDrop"
@@ -185,6 +188,7 @@ function summary(c) {
             class="comp"
             :class="{ sel: c.id === selectedId }"
             :ref="(el) => (cardEls[i] = el)"
+            :data-testid="`comp-${c.id}`"
             @click="selectedId = c.id"
             @contextmenu.prevent="openMenu($event, c)"
           >
@@ -194,7 +198,7 @@ function summary(c) {
               <div class="comp-sum muted">{{ summary(c) }}</div>
             </div>
             <code class="pill tiny">{{ c.id }}</code>
-            <button class="kebab" @click.stop="openMenu($event, c)" title="Component menu">⋯</button>
+            <button class="kebab" :data-testid="`kebab-${c.id}`" @click.stop="openMenu($event, c)" title="Component menu">⋯</button>
           </div>
         </template>
         <div v-if="dropIndex === page.components.length" class="placeholder"></div>

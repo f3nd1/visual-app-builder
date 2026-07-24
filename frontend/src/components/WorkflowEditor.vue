@@ -97,7 +97,7 @@ function renameState(id) {
 <template>
   <div class="wf">
     <div class="wf-toolbar">
-      <button @click="newState">+ State</button>
+      <button @click="newState" data-testid="add-state">+ State</button>
       <span class="muted tiny">Drag from a node's right edge to another node to create a transition. Right-click a node or edge for options.</span>
       <span class="spacer"></span>
       <span v-if="diag.orphan.size || diag.unreachable.size" class="issue-chip err">

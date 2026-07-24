@@ -32,6 +32,7 @@ onUnmounted(() => {
   <div
     v-if="menu.open"
     class="ctx"
+    data-testid="ctx-menu"
     :style="{ left: menu.x + 'px', top: menu.y + 'px' }"
     @click.stop
   >
@@ -40,6 +41,7 @@ onUnmounted(() => {
       :key="i"
       class="ctx-item"
       :class="{ danger: item.danger, disabled: item.disabled }"
+      :data-testid="`ctx-${item.label}`"
       @click="run(item)"
     >
       <span>{{ item.label }}</span>

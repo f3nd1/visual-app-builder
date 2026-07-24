@@ -60,7 +60,7 @@ function exportDef() {
 <template>
   <div class="topbar">
     <strong>Visual App Builder — Studio</strong>
-    <button @click="loadExample">Load QA example</button>
+    <button @click="loadExample" data-testid="load-example">Load QA example</button>
     <label class="filebtn">
       <button type="button" onclick="this.nextElementSibling.click()">Load file…</button>
       <input type="file" accept="application/json" style="display: none" @change="loadFile" />
@@ -86,6 +86,7 @@ function exportDef() {
       :key="t.id"
       class="tab"
       :class="{ active: active === t.id }"
+      :data-testid="`tab-${t.id}`"
       @click="active = t.id"
     >
       {{ t.label }}
