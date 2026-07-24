@@ -66,4 +66,22 @@ describe('MockPublicationStore', () => {
     const store = fresh()
     expect(() => store.publish({ application: {} })).toThrow(/application.code/)
   })
+
+  it('different content yields different checksums (a constant checksum would fail here)', () => {
+    const edited = structuredClone(qa)
+    edited.application.description += ' changed'
+    expect(checksum(JSON.stringify(qa))).not.toBe(checksum(JSON.stringify(edited)))
+  })
+
+  it('unicode (zh-CN) survives publish and read-back byte-identical', () => {
+    const store = fresh()
+    const def = structuredClone(qa)
+    def.translations['app.title']['zh-CN'] = '质量生命周期管理器'
+    def.translations['common.save']['zh-CN'] = '保存 🈶 ✓'
+    store.publish(def)
+    const back = store.getActive('qa_lifecycle_manager').definition
+    expect(back).toEqual(def)
+    expect(JSON.stringify(back)).toBe(JSON.stringify(def))
+    expect(validateDefinition(back)).toEqual([])
+  })
 })

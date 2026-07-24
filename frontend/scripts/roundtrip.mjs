@@ -19,8 +19,11 @@ const examplePath = join(repoRoot, 'examples', 'qa_lifecycle_manager.json')
 // 1. Load exactly as the Studio does.
 const def = JSON.parse(readFileSync(examplePath, 'utf8'))
 
-// 2. Trivial edit (what a designer might do in the Studio).
+// 2. Trivial edit (what a designer might do in the Studio) — including real
+// Simplified Chinese, so the round-trip also proves unicode survives the
+// write + python re-read.
 def.application.description = def.application.description + ' (edited in Studio)'
+def.translations['app.title']['zh-CN'] = '质量生命周期管理器'
 
 // 3. Serialise exactly as store.export().
 const out = JSON.stringify(def, null, 2)
