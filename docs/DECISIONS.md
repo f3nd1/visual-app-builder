@@ -31,3 +31,17 @@ The first three applications are QA Lifecycle Manager, Document Control Manager 
 ## D-008: Honest product boundary
 
 The system targets record-based, workflow-based and operational applications inside ERPNext. New integrations or genuinely new interface capabilities may still require developer work.
+
+## D-009: Studio built ahead of the backend, output schema-locked
+
+The Studio (the visual design frontend, in `frontend/`) was built before the ERPNext backend (bench, DocTypes, shared runtime), as a deliberate sequencing exception to D-005 and to CLAUDE.md's original implementation order. The backend generation happens in a later session once local OrbStack/bench access is available; the Studio is the staff-facing *design* tool and does not require a running bench to develop.
+
+To make this safe, the Studio's output is **schema-locked**: the editor's in-memory state *is* the definition document in the exact shape of `schemas/application-definition.schema.json` (no separate internal model, no mapping layer), and every edit is continuously validated against that real schema file plus the cross-section stable-ID rules that `scripts/check_repository.py` enforces. A round-trip check loads `examples/qa_lifecycle_manager.json`, edits it, exports, and runs the real `check_repository.py` against the output.
+
+This is a direct response to the original `prototype/visual_app_builder_prototype.html`, which invented its own export shape (`"schema_version": "0.3-interactive-prototype"`) that matched nothing, so nothing it produced connected to the rest of the system. The Studio must never repeat that: if the schema changes, the Studio's validation fails until it is updated to match.
+
+## D-010: Frontend stack is Vue 3 (settles the D-005 React/Vue question)
+
+The Studio is built with **Vue 3 + Vite**. This supersedes the tentative "may later use React and TypeScript" lean in D-005. Reason: Frappe Desk and `frappe-ui` are Vue 3, so the future Runtime bundle and any Frappe integration will be Vue; building the Studio in React would fork the frontend stack and prevent reuse of `frappe-ui` controls and Desk conventions.
+
+Supporting choices: a plain Vue `reactive()` store (no Pinia) whose state is the schema document; native HTML5 drag-and-drop with CSS grid for the page canvas; `@vue-flow/core` for the workflow node canvas; `ajv` (draft 2020-12) against the real schema file, plus a JS port of `check_repository.py`'s unique-ID and transition-reference checks, for continuous validation. The Studio and Runtime remain separate bundles (per ARCHITECTURE.md); this session built the Studio only.
