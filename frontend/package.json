@@ -1,0 +1,27 @@
+{
+  "name": "visual-app-builder-studio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Studio: the visual design frontend for Visual App Builder. Output is locked to schemas/application-definition.schema.json.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "roundtrip": "node scripts/roundtrip.mjs"
+  },
+  "dependencies": {
+    "@vue-flow/background": "^1.3.2",
+    "@vue-flow/controls": "^1.1.2",
+    "@vue-flow/core": "^1.42.1",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^6.0.7",
+    "vitest": "^2.1.8"
+  }
+}
