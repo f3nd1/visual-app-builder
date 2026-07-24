@@ -9,53 +9,80 @@ import { createRuntimeContext } from './context.js'
 import { runAutomations } from './engine/automation.js'
 import { SYNTHETIC_NOTICE } from './fixtures/synthetic.js'
 import { MOCK_USERS } from './fixtures/users.js'
+import { publicationStore } from '../lib/publicationStore.js'
 import RuntimePage from './components/RuntimePage.vue'
 import qa from '../../../examples/qa_lifecycle_manager.json'
 import dcm from '../../../examples/document_control_manager.json'
 import mvm from '../../../examples/material_vetting_manager.json'
 
-const EXAMPLES = {
-  qa_lifecycle_manager: qa,
-  document_control_manager: dcm,
-  material_vetting_manager: mvm,
+// The Runtime only ever runs PUBLISHED versions. So the harness can be used
+// standalone, seed the three examples as published v1 the first time it opens
+// (a real deployment would already have published apps). Anything the Studio
+// publishes afterwards appears here automatically via the shared store.
+if (publicationStore.listApplications().length === 0) {
+  for (const ex of [qa, dcm, mvm]) publicationStore.publish(ex)
 }
 
-const def = ref(structuredClone(qa))
+const apps = computed(() => publicationStore.listApplications())
+const appCode = ref(apps.value[0]?.appCode || null)
+const versionSel = ref(null) // null => active version
+
+const def = ref(null)
 const adapter = ref(null)
 const ctx = ref(null)
 const pageIdx = ref(0)
 const recordName = ref(null)
 const userName = ref(MOCK_USERS[0].name) // default: Administrator (System Manager)
+const override = ref(null) // ad-hoc "Load export…" definition, bypasses the store
 
 const currentUser = computed(() => MOCK_USERS.find((u) => u.name === userName.value) || null)
+const versions = computed(() => (appCode.value ? publicationStore.listVersions(appCode.value) : []))
+
+// Resolve the definition to run: an ad-hoc uploaded one, else the selected
+// published version, else the active published version.
+function resolveDef() {
+  if (override.value) return override.value
+  if (!appCode.value) return null
+  const rec = versionSel.value
+    ? publicationStore.getVersion(appCode.value, versionSel.value)
+    : publicationStore.getActive(appCode.value)
+  return rec?.definition || null
+}
 
 function rebuild() {
+  def.value = resolveDef()
+  if (!def.value) { adapter.value = null; ctx.value = null; return }
   const perms = new MockPermissionAdapter(def.value)
   adapter.value = new MockDataAdapter(def.value, { permissionAdapter: perms })
   ctx.value = createRuntimeContext(def.value, { adapter: adapter.value, user: currentUser.value })
   pageIdx.value = 0
   recordName.value = null
 }
-watch(def, rebuild, { immediate: true })
+watch([appCode, versionSel, override], rebuild, { immediate: true })
 // Switching role does not rebuild data (keeps edits); it just re-points the
 // context user, and every renderer re-reads permissions because it watches ctx.user.
 watch(currentUser, (u) => { if (ctx.value) ctx.value.user = u })
 
-function pickExample(code) {
-  def.value = structuredClone(EXAMPLES[code])
+function pickApp(code) {
+  override.value = null
+  versionSel.value = null
+  appCode.value = code
+}
+function pickVersion(v) {
+  versionSel.value = v ? Number(v) : null
 }
 function loadExport(ev) {
   const file = ev.target.files?.[0]
   if (!file) return
   const reader = new FileReader()
   reader.onload = () => {
-    try { def.value = JSON.parse(reader.result) } catch (e) { alert('Not valid JSON: ' + e.message) }
+    try { override.value = JSON.parse(reader.result) } catch (e) { alert('Not valid JSON: ' + e.message) }
   }
   reader.readAsText(file)
   ev.target.value = ''
 }
 
-const pages = computed(() => def.value.pages || [])
+const pages = computed(() => def.value?.pages || [])
 const page = computed(() => pages.value[pageIdx.value] || null)
 
 // Bumping this remounts RuntimePage so renderers re-read the (persisted) adapter
@@ -92,9 +119,16 @@ async function onChanged(event) {
       <strong>Runtime harness</strong>
       <span class="synthetic" :title="SYNTHETIC_NOTICE">⚠ {{ SYNTHETIC_NOTICE }}</span>
       <span class="spacer"></span>
-      <label>Definition</label>
-      <select :value="def.application.code" @change="pickExample($event.target.value)" data-testid="pick-definition">
-        <option v-for="(_d, code) in EXAMPLES" :key="code" :value="code">{{ code }}</option>
+      <label>Published app</label>
+      <select :value="appCode" @change="pickApp($event.target.value)" data-testid="pick-definition">
+        <option v-for="a in apps" :key="a.appCode" :value="a.appCode">{{ a.appCode }} (v{{ a.active }})</option>
+      </select>
+      <label>Version</label>
+      <select :value="versionSel || ''" @change="pickVersion($event.target.value)" data-testid="pick-version" :disabled="!!override">
+        <option value="">active (v{{ apps.find((a) => a.appCode === appCode)?.active }})</option>
+        <option v-for="v in versions" :key="v.version" :value="v.version">
+          v{{ v.version }}{{ v.active ? ' ●' : '' }} · {{ v.checksum }}
+        </option>
       </select>
       <label>Role</label>
       <select v-model="userName" data-testid="pick-user">

@@ -10,6 +10,8 @@ import WorkflowEditor from './components/WorkflowEditor.vue'
 import AutomationEditor from './components/AutomationEditor.vue'
 import MetaEditor from './components/MetaEditor.vue'
 import ApplicationEditor from './components/ApplicationEditor.vue'
+import { publicationStore } from './lib/publicationStore.js'
+import { approvedRegistry, registryIssues } from './lib/approvedRegistry.js'
 
 // Editors are registered here; each later step adds one. Keeping them in a
 // single list keeps App.vue a thin shell around the shared store.
@@ -55,6 +57,20 @@ function exportDef() {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+// Publish is gated on validity: a published version must be schema-valid AND
+// only reference approved DocTypes/fields (D-004). Publishing creates a new
+// immutable version in the publication store, which the Runtime reads from.
+const registryProblems = computed(() => registryIssues(store.def, approvedRegistry))
+const publishMsg = ref('')
+function publish() {
+  if (issues.value.length || registryProblems.value.length) {
+    publishMsg.value = `Cannot publish: ${issues.value.length} schema issue(s), ${registryProblems.value.length} registry issue(s).`
+    return
+  }
+  const res = publicationStore.publish(store.def)
+  publishMsg.value = `Published ${res.appCode} v${res.version} (checksum ${res.checksum}).`
+}
 </script>
 
 <template>
@@ -68,6 +84,15 @@ function exportDef() {
     <button class="primary" @click="exportDef" :title="issues.length ? 'Exports, but the definition still has validation issues' : 'Export a schema-valid definition'">
       Save / Export
     </button>
+    <button
+      class="primary"
+      @click="publish"
+      data-testid="publish"
+      :title="issues.length || registryProblems.length ? 'Fix validation and registry issues before publishing' : 'Publish an immutable version to the Runtime'"
+    >
+      Publish
+    </button>
+    <span v-if="publishMsg" class="publish-msg" data-testid="publish-msg">{{ publishMsg }}</span>
     <span class="spacer"></span>
     <span
       class="issue-chip"

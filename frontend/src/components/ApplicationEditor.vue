@@ -14,7 +14,7 @@ const codeOk = computed(() => ID_PATTERN.test(app().code || ''))
 <template>
   <div class="app-editor">
     <div class="row"><label>Code</label>
-      <input v-model="app().code" :class="{ bad: !codeOk }" />
+      <input v-model="app().code" :class="{ bad: !codeOk }" data-testid="app-code" />
       <span class="muted tiny">lowercase, letters/digits/underscore, must start with a letter</span>
     </div>
     <div class="row"><label>Title</label><input v-model="app().title" class="wide" /></div>
