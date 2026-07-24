@@ -16,7 +16,7 @@
 - [ ] Create Visual Application Version DocType.
 - [ ] Create Component Registry DocType.
 - [ ] Create Test Case DocType.
-- [ ] Create UAT Run DocType.
+- [ ] Create Visual App UAT Run DocType (system-level, records UAT results against a published Visual Application Version; distinct from a QA Lifecycle Manager review's own UAT Run business record).
 - [ ] Create Deployment Log DocType.
 - [ ] Add server-side definition validation.
 - [ ] Add permission-aware definition loading.
