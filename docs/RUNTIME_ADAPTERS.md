@@ -1,5 +1,9 @@
 # Runtime adapters — handoff spec for the real ERPNext connection
 
+> For the single current list of ALL deferred work (not just the Runtime
+> adapters), see `docs/KNOWN_GAPS.md`. This file is the detailed method-level
+> spec for the data/permission adapters; KNOWN_GAPS.md is the index.
+
 The Runtime (in `frontend/src/runtime/`) renders and operates applications purely
 from `definition_json`, and reaches all data and permission decisions through two
 interfaces. This session implemented **mock** adapters against synthetic data. To
