@@ -9,12 +9,13 @@ import '@vue-flow/controls/dist/style.css'
 import { store } from '../store.js'
 import { addState, removeState, addTransition, removeTransition } from '../lib/workflowMutations.js'
 import { workflowDiagnostics } from '../lib/workflowChecks.js'
+import { getNodePos, setNodePos, ensurePositions } from '../lib/layoutStore.js'
 import ContextMenu from './ContextMenu.vue'
 
 // def is the source of truth. Node positions are Studio-only layout state (the
 // schema's state object is additionalProperties:false, so x/y must NOT be
-// exported) — kept in a local map, auto-seeded per state.
-const positions = ref({})
+// exported) — persisted in the separate layoutStore, keyed by app code+version.
+const CANVAS = 'workflow'
 const menu = ref({ open: false, x: 0, y: 0, items: [] })
 const sel = ref(null) // { kind: 'state'|'transition', id }
 
@@ -22,17 +23,18 @@ const wf = () => store.def.workflow
 const diag = computed(() => workflowDiagnostics(store.def))
 
 watchEffect(() => {
-  wf().states.forEach((s, i) => {
-    if (!positions.value[s.id]) {
-      positions.value[s.id] = { x: 60 + (i % 4) * 200, y: 60 + Math.floor(i / 4) * 140 }
-    }
-  })
+  ensurePositions(
+    store.def,
+    CANVAS,
+    wf().states.map((s) => s.id),
+    (_id, i) => ({ x: 60 + (i % 4) * 200, y: 60 + Math.floor(i / 4) * 140 }),
+  )
 })
 
 const nodes = computed(() =>
   wf().states.map((s) => ({
     id: s.id,
-    position: positions.value[s.id] || { x: 40, y: 40 },
+    position: getNodePos(store.def, CANVAS, s.id) || { x: 40, y: 40 },
     data: { label: s.label, diag: diag.value.byState[s.id] },
     class: sel.value?.kind === 'state' && sel.value.id === s.id ? 'selected' : '',
   })),
@@ -56,7 +58,7 @@ function onConnect({ source, target }) {
   sel.value = { kind: 'transition', id }
 }
 function onNodeDragStop({ node }) {
-  positions.value[node.id] = { ...node.position }
+  setNodePos(store.def, CANVAS, node.id, node.position)
 }
 function newState() {
   const id = addState(store.def)
