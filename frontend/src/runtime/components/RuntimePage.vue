@@ -12,7 +12,7 @@ defineProps({
   ctx: { type: Object, required: true },
   recordName: { type: String, default: null },
 })
-const emit = defineEmits(['open', 'saved', 'transition'])
+const emit = defineEmits(['open', 'saved', 'changed'])
 
 // which renderer handles a component type
 function rendererFor(type) {
@@ -42,7 +42,7 @@ function rendererFor(type) {
         :component="c"
         :ctx="ctx"
         :record-name="recordName"
-        @transition="emit('transition', $event)"
+        @changed="emit('changed', $event)"
       />
       <div v-else class="placeholder" :data-testid="`unknown-${c.id}`">
         Component type “{{ c.type }}” has no runtime renderer yet.

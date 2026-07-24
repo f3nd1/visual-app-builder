@@ -6,6 +6,7 @@ import { ref, computed, watch } from 'vue'
 import { MockDataAdapter } from './adapters/MockDataAdapter.js'
 import { MockPermissionAdapter } from './adapters/MockPermissionAdapter.js'
 import { createRuntimeContext } from './context.js'
+import { runAutomations } from './engine/automation.js'
 import { SYNTHETIC_NOTICE } from './fixtures/synthetic.js'
 import { MOCK_USERS } from './fixtures/users.js'
 import RuntimePage from './components/RuntimePage.vue'
@@ -57,8 +58,26 @@ function loadExport(ev) {
 const pages = computed(() => def.value.pages || [])
 const page = computed(() => pages.value[pageIdx.value] || null)
 
+// Bumping this remounts RuntimePage so renderers re-read the (persisted) adapter
+// data after a create/transition — WITHOUT rebuilding the adapter, which would
+// discard those very changes.
+const refreshKey = ref(0)
+const autoLog = ref([])
+
 function openRecord(name) { recordName.value = name }
 function selectPage(i) { pageIdx.value = i; recordName.value = null }
+
+async function onSaved({ entityId, record }) {
+  recordName.value = record.name
+  const log = await runAutomations(ctx.value, { type: 'record_created', entityId, record })
+  if (log.length) autoLog.value = [`▶ record_created ${record.name}`, ...log, ...autoLog.value]
+  refreshKey.value++
+}
+async function onChanged(event) {
+  const log = await runAutomations(ctx.value, event)
+  if (log.length) autoLog.value = [`▶ ${event.type} ${event.record?.name}`, ...log, ...autoLog.value]
+  refreshKey.value++
+}
 </script>
 
 <template>
@@ -98,13 +117,25 @@ function selectPage(i) { pageIdx.value = i; recordName.value = null }
       <button v-if="recordName" class="back" @click="recordName = null" data-testid="back">← back to list</button>
       <RuntimePage
         v-if="page && ctx"
+        :key="refreshKey"
         :page="page"
         :ctx="ctx"
         :record-name="recordName"
         @open="openRecord"
-        @saved="rebuild"
+        @saved="onSaved"
+        @changed="onChanged"
       />
       <p v-else class="muted">This definition has no pages.</p>
+
+      <section v-if="autoLog.length" class="autolog" data-testid="autolog">
+        <div class="al-head">
+          <strong>Automation / action log</strong>
+          <button @click="autoLog = []">clear</button>
+        </div>
+        <ul>
+          <li v-for="(line, i) in autoLog" :key="i">{{ line }}</li>
+        </ul>
+      </section>
     </main>
   </div>
 </template>
@@ -120,5 +151,8 @@ function selectPage(i) { pageIdx.value = i; recordName.value = null }
 .rt-body { padding: 16px; }
 .back { margin-bottom: 12px; border: 1px solid #d9dee3; border-radius: 6px; padding: 4px 10px; background: #fff; cursor: pointer; }
 .muted { color: #6b7680; }
+.autolog { margin-top: 20px; border: 1px solid #d9dee3; border-radius: 8px; background: #fff; padding: 10px 14px; }
+.al-head { display: flex; justify-content: space-between; align-items: center; }
+.autolog ul { margin: 8px 0 0; padding-left: 18px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
 button, select { font: inherit; }
 </style>

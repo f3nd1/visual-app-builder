@@ -4,16 +4,18 @@
 // transition execution against the mock data.
 import { ref, watch, computed } from 'vue'
 import { resolveEntity, availableTransitions } from '../engine/resolve.js'
+import { executeTransition } from '../engine/workflow.js'
 
 const props = defineProps({
   component: { type: Object, required: true },
   ctx: { type: Object, required: true },
   recordName: { type: String, default: null },
 })
-const emit = defineEmits(['transition'])
+const emit = defineEmits(['changed'])
 
 const entity = computed(() => resolveEntity(props.ctx.def, props.component))
 const record = ref(null)
+const error = ref('')
 
 async function load() {
   record.value = props.recordName && entity.value
@@ -31,7 +33,19 @@ const transitions = computed(() =>
   currentState.value ? availableTransitions(props.ctx.def, currentState.value.id, null) : [],
 )
 function roleAllows(t) {
-  return !roles.value || roles.value.includes(t.role)
+  const rs = roles.value
+  return !rs || rs.includes('System Manager') || rs.includes(t.role)
+}
+
+async function doTransition(t) {
+  error.value = ''
+  try {
+    const { event } = await executeTransition(props.ctx, entity.value.id, props.recordName, t)
+    await load()
+    emit('changed', event) // lets the harness run field_changed automations + refresh
+  } catch (e) {
+    error.value = e.message
+  }
 }
 </script>
 
@@ -48,12 +62,13 @@ function roleAllows(t) {
           :disabled="!roleAllows(t)"
           :title="roleAllows(t) ? '' : `Requires role: ${t.role}`"
           :data-testid="`transition-${t.id}`"
-          @click="emit('transition', { transition: t, record })"
+          @click="doTransition(t)"
         >
           {{ t.action }} <span class="role">({{ t.role }})</span>
         </button>
         <span v-if="transitions.length === 0" class="muted">No onward transitions.</span>
       </div>
+      <p v-if="error" class="denied" data-testid="wfh-error">{{ error }}</p>
     </template>
   </div>
 </template>
@@ -61,6 +76,7 @@ function roleAllows(t) {
 <style scoped>
 .mhead { margin-bottom: 8px; }
 .muted { color: #6b7680; }
+.denied { color: #d1344b; margin-top: 8px; }
 .trans { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 button { border: 1px solid #d9dee3; border-radius: 6px; padding: 5px 10px; cursor: pointer; background: #fff; }
 button:disabled { opacity: .5; cursor: not-allowed; }

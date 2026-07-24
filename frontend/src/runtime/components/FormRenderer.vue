@@ -39,7 +39,7 @@ async function save() {
   } else {
     const created = await props.ctx.adapter.createRecord(entity.value.id, record.value)
     message.value = `Created ${created.name}.`
-    emit('saved', created.name)
+    emit('saved', { entityId: entity.value.id, record: created })
   }
 }
 async function childRows(rel) {
