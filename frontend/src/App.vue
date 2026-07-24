@@ -4,14 +4,16 @@ import { store, issues } from './store.js'
 import qaExample from '../../examples/qa_lifecycle_manager.json'
 import JsonView from './components/JsonView.vue'
 import IssuePanel from './components/IssuePanel.vue'
+import DataModelEditor from './components/DataModelEditor.vue'
 
 // Editors are registered here; each later step adds one. Keeping them in a
 // single list keeps App.vue a thin shell around the shared store.
 const tabs = [
+  { id: 'data_model', label: 'Data Model', comp: DataModelEditor },
   { id: 'issues', label: 'Issues', comp: IssuePanel },
   { id: 'json', label: 'Definition JSON', comp: JsonView },
 ]
-const active = ref('json')
+const active = ref('data_model')
 const activeComp = computed(() => tabs.find((t) => t.id === active.value)?.comp)
 
 function loadExample() {
